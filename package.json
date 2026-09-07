@@ -1,0 +1,54 @@
+{
+  "name": "naga-configurator",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "build:native": "test electron/native/naga-hid-helper -nt electron/native/naga-hid-helper.swift || swiftc -O electron/native/naga-hid-helper.swift -o electron/native/naga-hid-helper",
+    "dev": "npm run build:native && vite",
+    "build": "npm run build:native && tsc -b && vite build",
+    "package:mac": "npm run build && electron-builder --mac --dir",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "io.mkrlab.naga-configurator",
+    "productName": "Naga Configurator",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/tray/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/native/naga-hid-helper",
+        "to": "native/naga-hid-helper"
+      }
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.utilities",
+      "target": "dir"
+    }
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.79.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2",
+    "vite-plugin-electron": "^1.1.2",
+    "vite-plugin-electron-renderer": "^1.0.0"
+  }
+}
