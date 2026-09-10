@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Not sandboxed on purpose: raw HID device reads (IOHIDManager) and synthetic keyboard/mouse
+	     injection (CGEvent) are both blocked by the App Sandbox with no entitlement that restores
+	     them, and this app's entire job is doing exactly those two things system-wide. Distribution
+	     is Developer ID + notarization instead of the Mac App Store. -->
+</dict>
+</plist>
