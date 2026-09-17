@@ -15,6 +15,9 @@ SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Jorge Pichardo (U634VN
 NOTARY_PROFILE="${NOTARY_PROFILE:-naga-notary}"
 APP=build/NagaConfigurator.app
 DMG=build/NagaConfigurator.dmg
+BUNDLE_ID=io.mkrlab.naga-configurator-native
+SHORT_VERSION=1.0.0
+BUILD_VERSION=1
 
 echo "==> Building release binary"
 swift build -c release
@@ -25,6 +28,43 @@ cp .build/arm64-apple-macosx/release/NagaConfigurator "$APP/Contents/MacOS/NagaC
 rsync -a --delete .build/arm64-apple-macosx/release/NagaConfigurator_NagaConfigurator.bundle/ \
     "$APP/Contents/Resources/NagaConfigurator_NagaConfigurator.bundle/"
 cp build/icon.icns "$APP/Contents/Resources/AppIcon.icns"
+
+# Without a real Info.plist, macOS can't reliably treat this folder as a proper app bundle —
+# Bundle.main.resourceURL comes back wrong, so Bundle.module can never find
+# NagaConfigurator_NagaConfigurator.bundle in Contents/Resources and the app hard-crashes the
+# instant it tries to load a bundled image (e.g. the top bar logo).
+cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>NagaConfigurator</string>
+    <key>CFBundleIdentifier</key>
+    <string>${BUNDLE_ID}</string>
+    <key>CFBundleName</key>
+    <string>Naga Configurator</string>
+    <key>CFBundleDisplayName</key>
+    <string>Naga Configurator</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${SHORT_VERSION}</string>
+    <key>CFBundleVersion</key>
+    <string>${BUILD_VERSION}</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>
+PLIST
 
 echo "==> Signing with Developer ID (hardened runtime)"
 codesign --force --deep --options runtime \
