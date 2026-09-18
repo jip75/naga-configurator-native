@@ -3,11 +3,13 @@ import SwiftUI
 enum DiagramView: CaseIterable { case top, side }
 
 /// A control that exists on the mouse but isn't part of the 12-button left/right column layout.
-/// Scroll Click always passes through as an ordinary system click this app doesn't intercept —
-/// same honest-not-configurable spirit as NAV_TAB_COPY. The two buttons flanking the wheel used
-/// to hardwire a one-shot toggle into HyperShift A / B; they're plain customizable buttons now
-/// (rawCode "topA"/"topB", same mapping/dispatch pipeline as 1-12), so their `rawCode` is non-nil
-/// and their displayed label comes from whatever action is actually assigned, not a fixed string.
+/// All three are now plain customizable buttons (rawCode "scrollClick"/"topA"/"topB", same
+/// mapping/dispatch pipeline as 1-12), so their `rawCode` is non-nil and their displayed label
+/// comes from whatever action is actually assigned, not a fixed string. Scroll Click is the one
+/// exception worth flagging in its `info` tooltip: exclusive HID device access is a confirmed
+/// dead end on this OS (see NagaHIDManager's header comment), so the wheel-click's standard
+/// system middle-click keeps firing on top of whatever custom action gets assigned here — same
+/// honest-about-limits spirit as NAV_TAB_COPY, just "both fire" instead of "not configurable".
 private struct SystemHotspot {
     let fallbackLabel: String
     let info: String
@@ -21,22 +23,25 @@ private struct SystemHotspot {
 private let systemHotspots: [SystemHotspot] = [
     SystemHotspot(
         fallbackLabel: "Scroll Click",
-        info: "Standard system click — passes through unmodified, not intercepted by this app.",
-        rawCode: nil,
-        topXY: (48, 18), sideXY: (33, 10)
+        info: "Customizable, same as buttons 1-12. The wheel's standard system middle-click also keeps firing alongside whatever you assign here — that part can't be intercepted from software.",
+        rawCode: "scrollClick",
+        topXY: (48, 14), sideXY: (33, 6)
     ),
     SystemHotspot(
         fallbackLabel: "Unassigned",
-        info: "Front button behind the wheel — customizable, same as buttons 1-12. Defaults to toggling the HyperShift layer.",
+        info: "Front button behind the wheel — customizable, same as buttons 1-12. Defaults to toggling the HyperShift layer. Also shifts cursor speed via the mouse's own onboard firmware, independent of this app — not something this app can change or turn off.",
         rawCode: "topA",
         topXY: (48, 25.5), sideXY: (33, 17)
     ),
     SystemHotspot(
         fallbackLabel: "Unassigned",
-        info: "Rear button behind the wheel — customizable, same as buttons 1-12.",
+        info: "Rear button behind the wheel — customizable, same as buttons 1-12. Also shifts cursor speed via the mouse's own onboard firmware, independent of this app — not something this app can change or turn off.",
         rawCode: "topB",
-        topXY: (48, 32), sideXY: (33, 23.5)
+        topXY: (48, 37), sideXY: (33, 29)
     ),
+    // "bottomButton" hotspot removed 2026-09-11 — usage 0x09/0x02 turned out to be this mouse's
+    // ordinary secondary click, not a distinct physical control. See Action.swift's DefaultMapping
+    // and NagaHIDManager's dpiUsageToRawCode comments.
 ]
 
 struct MouseDiagramView: View {
@@ -106,13 +111,13 @@ struct MouseDiagramView: View {
                                  (assigned?.targetLayer == activeLayer || assigned?.targetLayer == editLayer))
                             )
                             SystemHotspotLabel(text: assigned?.displayLabel ?? spot.fallbackLabel, engaged: engaged)
-                                .position(x: geo.size.width * x / 100 + 8, y: geo.size.height * y / 100)
                                 .contentShape(Rectangle())
+                                .position(x: geo.size.width * x / 100 + 8, y: geo.size.height * y / 100)
                                 .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
                             SystemHotspotDot(engaged: engaged)
+                                .contentShape(Rectangle())
                                 .position(x: geo.size.width * x / 100 - 38, y: geo.size.height * y / 100)
                                 .help(spot.info)
-                                .contentShape(Rectangle())
                                 .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
                         }
                     }

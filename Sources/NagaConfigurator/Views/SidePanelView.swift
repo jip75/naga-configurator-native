@@ -37,20 +37,55 @@ private func railID(for kind: ActionKind) -> String {
 /// Synapse's right-handed reference UI), with a vertical icon rail down its own left edge for
 /// switching action type, same layout language as the reference screenshots.
 struct SidePanelView: View {
-    /// Set for the 12 numbered buttons; nil for the two top buttons flanking the wheel.
+    /// Set for the 12 numbered buttons; nil for the top/bottom system buttons.
     let buttonNumber: Int?
-    /// Set for the two top buttons flanking the wheel; nil for the 12 numbered buttons.
+    /// Set for the top/bottom system buttons; nil for the 12 numbered buttons.
     let topLabel: String?
+    /// The system button's rawCode ("topA"/"topB"/"bottomButton"); nil for the 12 numbered buttons.
+    /// Distinct from `topLabel` because the HyperShift-assign lock below applies only to the two
+    /// buttons flanking the wheel, not every system button.
+    let rawCode: String?
     let action: Action?
     let editLayer: HyperLayer
     let onChange: (Action) -> Void
     let onClose: () -> Void
 
-    @State private var railSelection = "Keyboard Function"
-    @State private var labelText = ""
+    @State private var railSelection: String
+    @State private var labelText: String
+
+    // ContentView gives this view a `.id()` keyed on (rawCode, editLayer), so a different button
+    // or a different layer for the same button is a brand-new SidePanelView instance, not a reused
+    // one — these initial values seed @State once, on that fresh instance, instead of being
+    // written in via onAppear/onChange. That matters because `onChange(of: labelText)` below
+    // commits straight to `onChange`/ContentView using whatever button is CURRENTLY selected —
+    // if switching buttons re-set labelText on a still-alive instance instead of creating a new
+    // one, that commit could land the outgoing button's label on the newly-selected button (this
+    // is exactly what corrupted a HyperShift-locked label onto Button 12's neighbor live on
+    // 2026-09-11). A fresh instance per identity makes that race structurally impossible.
+    init(buttonNumber: Int?, topLabel: String?, rawCode: String?, action: Action?, editLayer: HyperLayer,
+         onChange: @escaping (Action) -> Void, onClose: @escaping () -> Void) {
+        self.buttonNumber = buttonNumber
+        self.topLabel = topLabel
+        self.rawCode = rawCode
+        self.action = action
+        self.editLayer = editLayer
+        self.onChange = onChange
+        self.onClose = onClose
+        let locked = rawCode == "topA" && editLayer != .base
+        _railSelection = State(initialValue: locked ? "HyperShift Assign" : (action.map { railID(for: $0.kind) } ?? "Keyboard Function"))
+        _labelText = State(initialValue: action?.label ?? "")
+    }
 
     private var isOpen: Bool { buttonNumber != nil || topLabel != nil }
     private var headerTitle: String { buttonNumber.map { "Button \($0)" } ?? topLabel ?? "" }
+    // Under a HyperShift layer, topA exists only to toggle back out of that layer — Razer's own
+    // Synapse locks it down to layer-assign once you're editing inside a HyperShift tab. Locking
+    // here (not just defaulting) stops a HyperShift-layer press from silently landing on a stale
+    // key/mouse/macro/launch action instead. topB and the bottom button are NOT part of this
+    // toggle-back convention (confirmed live 2026-09-11: topB is meant to fire the same action —
+    // Screenshot — on every layer, so it needs to stay editable/assignable under HS A/HS B too),
+    // so the lock is scoped to topA alone by rawCode, not by topLabel != nil.
+    private var isLockedToHyperShiftAssign: Bool { rawCode == "topA" && editLayer != .base }
 
     var body: some View {
         Group {
@@ -59,8 +94,9 @@ struct SidePanelView: View {
                     // Vertical icon rail
                     VStack(spacing: 4) {
                         ForEach(RAIL) { item in
+                            let disabled = item.kind == nil || (isLockedToHyperShiftAssign && item.id != "HyperShift Assign")
                             Button {
-                                guard item.kind != nil else { return }
+                                guard !disabled else { return }
                                 railSelection = item.id
                             } label: {
                                 Image(systemName: item.icon)
@@ -71,8 +107,10 @@ struct SidePanelView: View {
                             .foregroundColor(railIconColor(item))
                             .background(railSelection == item.id ? Theme.accent.opacity(0.15) : Color.clear)
                             .cornerRadius(8)
-                            .opacity(item.kind == nil ? 0.35 : 1)
-                            .help(item.tooltip)
+                            .opacity(disabled ? 0.35 : 1)
+                            .help(isLockedToHyperShiftAssign && item.kind != nil && item.id != "HyperShift Assign"
+                                  ? "Top buttons only toggle layers while editing \(editLayer.label) — switch to Standard to assign a shortcut"
+                                  : item.tooltip)
                         }
                         Spacer()
                     }
@@ -125,6 +163,13 @@ struct SidePanelView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
                                 .cornerRadius(8)
                                 .onSubmit(commitLabel)
+                                // onCommit/onSubmit only fire on Return — clicking away from the
+                                // field (the far more common way to finish typing a name) fired
+                                // neither, so the label never reached `mapping` and Save never lit
+                                // up. Commit on every keystroke instead; safe now that a fresh
+                                // SidePanelView instance (see init) is what resets labelText when
+                                // the selected button/layer changes, not a mutation of this one.
+                                .onChange(of: labelText) { _ in commitLabel() }
                         }
 
                         Text(editLayer.label.uppercased())
@@ -162,10 +207,6 @@ struct SidePanelView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
                 .cornerRadius(16)
                 .shadow(color: .black.opacity(0.4), radius: 24, x: -4, y: 8)
-                .onAppear { syncFromAction() }
-                .onChange(of: buttonNumber) { _ in syncFromAction() }
-                .onChange(of: topLabel) { _ in syncFromAction() }
-                .onChange(of: editLayer) { _ in syncFromAction() }
             } else {
                 EmptyView()
             }
@@ -185,11 +226,6 @@ struct SidePanelView: View {
         case "HyperShift Assign": return "LAYER"
         default: return "APPLICATION"
         }
-    }
-
-    private func syncFromAction() {
-        railSelection = action.map { railID(for: $0.kind) } ?? "Keyboard Function"
-        labelText = action?.label ?? ""
     }
 
     private func commitLabel() {

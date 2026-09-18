@@ -160,7 +160,16 @@ enum DefaultMapping {
         // The two buttons flanking the wheel — previously hardwired one-shot layer toggles,
         // now ordinary customizable buttons like 1-12. Default: the one closest to the wheel
         // stays the single HyperShift toggle; the far one is free for anything (screenshot here).
+        // topB gets the same action on every layer — unlike topA (the actual toggle-back
+        // control), it isn't part of the HyperShift-navigation convention, so "each layer stands
+        // on its own" would otherwise silently swallow a topB press made while topA had shifted
+        // into hyperA/hyperB (confirmed live 2026-09-11: screenshot fired once on base, then
+        // nothing after a topA press changed the active layer).
         "topA": ButtonEntry(base: .layerToggle(.hyperA)),
-        "topB": ButtonEntry(base: .launch("Screenshot")),
+        "topB": ButtonEntry(base: .launch("Screenshot"), hyperA: .launch("Screenshot"), hyperB: .launch("Screenshot")),
+        // "bottomButton" (usage 0x09/0x02) removed 2026-09-11 — see NagaHIDManager's
+        // dpiUsageToRawCode comment. It wasn't a distinct physical control; it was this mouse's
+        // ordinary secondary click, and mapping it to Mission Control was hijacking every click
+        // system-wide, including clicks made to operate this app's own UI.
     ]
 }

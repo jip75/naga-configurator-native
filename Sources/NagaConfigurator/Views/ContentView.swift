@@ -54,6 +54,21 @@ struct ContentView: View {
                         GeometryReader { area in
                             VStack(spacing: vSpacing) {
                                 ZStack(alignment: .trailing) {
+                                    if selected != nil || selectedTop != nil {
+                                        // Click-away dismiss: a full-bleed transparent catcher BEHIND
+                                        // the diagram — ZStack hit-testing gives later/topmost children
+                                        // priority, so this must render under MouseDiagramView or it
+                                        // swallows every tap on the diagram (including the other two
+                                        // hotspots) once any panel is open, before the hotspot's own
+                                        // onTapGesture ever sees it. Non-hotspot diagram areas (the
+                                        // mouse image itself) have no gesture of their own, so taps
+                                        // there still fall through to this catcher and dismiss.
+                                        Color.clear
+                                            .contentShape(Rectangle())
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .onTapGesture { selected = nil; selectedTop = nil }
+                                    }
+
                                     MouseDiagramView(
                                         view: diagramView,
                                         selected: hid.lastFiredButton ?? selected,
@@ -62,18 +77,32 @@ struct ContentView: View {
                                         editLayer: editLayer,
                                         activeLayer: hid.activeLayer,
                                         containerSize: CGSize(width: area.size.width, height: area.size.height - viewAngleStripHeight - vSpacing)
-                                    ) { selectedTop = nil; selected = $0 } onSelectTop: { selected = nil; selectedTop = $0 }
+                                    ) { n in
+                                        hid.debugLog("onSelect: number=\(n) (was selected=\(String(describing: selected)) selectedTop=\(String(describing: selectedTop)))")
+                                        selectedTop = nil; selected = n
+                                    } onSelectTop: { code in
+                                        hid.debugLog("onSelectTop: rawCode=\(code) (was selected=\(String(describing: selected)) selectedTop=\(String(describing: selectedTop)))")
+                                        selected = nil; selectedTop = code
+                                    }
                                     .frame(maxWidth: .infinity)
 
                                     if selected != nil || selectedTop != nil {
                                         SidePanelView(
                                             buttonNumber: selected,
                                             topLabel: selectedTop.map(topButtonLabel),
+                                            rawCode: selectedTop,
                                             action: selectedAction,
                                             editLayer: editLayer,
                                             onChange: handleActionChange,
                                             onClose: { selected = nil; selectedTop = nil }
                                         )
+                                        // A different button or a different layer for the same
+                                        // button must be a fresh SidePanelView instance — its
+                                        // internal @State (typed label, rail selection) is seeded
+                                        // once at init from `action` and must never be reused
+                                        // across a different button, or a stale in-flight label
+                                        // edit can land on the wrong one. See SidePanelView.init.
+                                        .id("\(selectedRawCode ?? "")|\(editLayer.rawValue)")
                                         .padding(.trailing, 8)
                                         .transition(.move(edge: .trailing).combined(with: .opacity))
                                         .zIndex(1)
@@ -109,11 +138,11 @@ struct ContentView: View {
             // Each layer stands on its own (no fallback to base) — same rule as the Electron
             // app's NagaBridge.handleLine.
             hid.onButtonPressed = { rawCode in
-                print("DEBUG onButtonPressed: rawCode=\(rawCode) activeLayer=\(hid.activeLayer) entry=\(String(describing: mapping[rawCode]))")
+                hid.debugLog("onButtonPressed: rawCode=\(rawCode) activeLayer=\(hid.activeLayer) entry=\(String(describing: mapping[rawCode]))")
                 if let action = mapping[rawCode]?.action(for: hid.activeLayer) {
                     hid.dispatch(action)
                 } else {
-                    print("DEBUG onButtonPressed: no action resolved for rawCode=\(rawCode)")
+                    hid.debugLog("onButtonPressed: no action resolved for rawCode=\(rawCode)")
                 }
             }
         }
@@ -139,7 +168,12 @@ struct ContentView: View {
     }
 
     private func topButtonLabel(_ rawCode: String) -> String {
-        rawCode == "topA" ? "Front Top Button" : "Rear Top Button"
+        switch rawCode {
+        case "topA": return "Front Top Button"
+        case "topB": return "Rear Top Button"
+        case "scrollClick": return "Scroll Click"
+        default: return rawCode
+        }
     }
 
     private var selectedAction: Action? {

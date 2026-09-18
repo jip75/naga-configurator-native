@@ -8,6 +8,9 @@ let package = Package(
         .executableTarget(
             name: "NagaConfigurator",
             resources: [.copy("Resources")]
+        ),
+        .executableTarget(
+            name: "HIDSenderProbe"
         )
     ]
 )
