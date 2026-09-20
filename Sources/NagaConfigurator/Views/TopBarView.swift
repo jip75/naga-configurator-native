@@ -5,6 +5,8 @@ private let NAV_TAB_ICONS: [String: String] = [
     "Performance": "gauge.with.dots.needle.67percent",
     "Scrolling": "arrow.up.arrow.down",
     "Lighting": "lightbulb",
+    "About": "info.circle",
+    "How-To": "questionmark.circle",
 ]
 
 private func compactLayerLabel(_ layer: HyperLayer) -> String {

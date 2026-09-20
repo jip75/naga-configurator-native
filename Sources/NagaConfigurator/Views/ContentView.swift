@@ -2,7 +2,7 @@ import SwiftUI
 
 enum SaveState { case clean, dirty, saving, saved }
 
-let NAV_TABS = ["Customize", "Performance", "Scrolling", "Lighting"]
+let NAV_TABS = ["Customize", "Performance", "Scrolling", "Lighting", "About", "How-To"]
 
 // Nothing beyond button-mapping is wired to real hardware state yet (no DPI/polling or Chroma
 // telemetry) — these tabs switch for real, but show an honest "not yet configurable" state
@@ -116,6 +116,10 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, hPad)
                         .padding(.bottom, vPad)
+                    } else if activeTab == "About" {
+                        AboutView()
+                    } else if activeTab == "How-To" {
+                        HowToView()
                     } else {
                         Text(NAV_TAB_COPY[activeTab] ?? "")
                             .font(.system(size: 13))
