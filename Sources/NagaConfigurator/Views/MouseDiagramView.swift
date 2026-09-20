@@ -16,6 +16,7 @@ private struct SystemHotspot {
     let rawCode: String?
     let topXY: (Double, Double)
     let sideXY: (Double, Double)
+    var labelOnLeft: Bool = false
 
     func xy(for view: DiagramView) -> (Double, Double) { view == .top ? topXY : sideXY }
 }
@@ -42,6 +43,19 @@ private let systemHotspots: [SystemHotspot] = [
     // "bottomButton" hotspot removed 2026-09-11 — usage 0x09/0x02 turned out to be this mouse's
     // ordinary secondary click, not a distinct physical control. See Action.swift's DefaultMapping
     // and NagaHIDManager's dpiUsageToRawCode comments.
+    SystemHotspot(
+        fallbackLabel: "Unassigned",
+        info: "Wheel tilt left — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
+        rawCode: "tiltLeft",
+        topXY: (40, 5), sideXY: (24, 1),
+        labelOnLeft: true
+    ),
+    SystemHotspot(
+        fallbackLabel: "Unassigned",
+        info: "Wheel tilt right — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
+        rawCode: "tiltRight",
+        topXY: (57, 5), sideXY: (42, 1)
+    ),
 ]
 
 struct MouseDiagramView: View {
@@ -110,9 +124,10 @@ struct MouseDiagramView: View {
                                 (assigned?.kind == .layerToggle && assigned?.targetLayer != nil &&
                                  (assigned?.targetLayer == activeLayer || assigned?.targetLayer == editLayer))
                             )
-                            SystemHotspotLabel(text: assigned?.displayLabel ?? spot.fallbackLabel, engaged: engaged)
+                            SystemHotspotLabel(text: assigned?.displayLabel ?? spot.fallbackLabel, engaged: engaged, alignLeading: !spot.labelOnLeft)
+                                .frame(width: 100, alignment: spot.labelOnLeft ? .trailing : .leading)
                                 .contentShape(Rectangle())
-                                .position(x: geo.size.width * x / 100 + 8, y: geo.size.height * y / 100)
+                                .position(x: geo.size.width * x / 100 + (spot.labelOnLeft ? -58 : 58), y: geo.size.height * y / 100)
                                 .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
                             SystemHotspotDot(engaged: engaged)
                                 .contentShape(Rectangle())
@@ -199,11 +214,13 @@ private struct SystemHotspotDot: View {
 private struct SystemHotspotLabel: View {
     let text: String
     let engaged: Bool
+    var alignLeading: Bool = true
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .semibold))
             .foregroundColor(engaged ? Theme.accentText : Theme.muted)
-            .fixedSize()
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 }
 

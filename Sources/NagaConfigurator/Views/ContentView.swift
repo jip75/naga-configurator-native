@@ -172,6 +172,8 @@ struct ContentView: View {
         case "topA": return "Front Top Button"
         case "topB": return "Rear Top Button"
         case "scrollClick": return "Scroll Click"
+        case "tiltLeft": return "Wheel Tilt Left"
+        case "tiltRight": return "Wheel Tilt Right"
         default: return rawCode
         }
     }

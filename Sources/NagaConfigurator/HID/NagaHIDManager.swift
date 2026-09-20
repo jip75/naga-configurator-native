@@ -52,6 +52,21 @@ final class NagaHIDManager: ObservableObject {
     // repeat behavior as topA/topB above — own clock so it can't eat their debounce window either.
     private var lastScrollClickFire: CFAbsoluteTime = 0
     private let scrollClickDebounce: CFAbsoluteTime = 0.2
+    // Wheel tilt ("tiltLeft"/"tiltRight"): isolated live 2026-09-18 via NAGA_DISCOVER on
+    // usagePage=0xFF00 usage=0x40 reportID=0 cookie=102 — an encoder-style vendor channel that
+    // re-fires repeatedly in ~256-step increments for as long as the wheel stays tilted (confirmed:
+    // an isolated right-only capture produced purely negative values -255..-512; a left-heavy
+    // capture produced the positive counterpart), unlike topA/topB/scrollClick's single-report-
+    // per-press array. Sign gives direction; magnitude is not used. This device is opened non-
+    // exclusively, so the OS's own default HID handling processes the same raw report in parallel
+    // and drives native horizontal scroll — that's expected, not a conflict, and out of this app's
+    // control (same caveat as scrollClick's system middle-click, see below). Not yet pinned to a
+    // specific interface the way rearButtonDevice is for cookie 891 — only one device was observed
+    // emitting this cookie during capture, but per this file's cookie-891 lesson, cookie 102 may not
+    // be globally unique on this composite device either; revisit if a false-fire is ever reported.
+    private var lastTiltLeftFire: CFAbsoluteTime = 0
+    private var lastTiltRightFire: CFAbsoluteTime = 0
+    private let tiltDebounce: CFAbsoluteTime = 0.35
     // reportID=5/cookie=891 is NOT globally unique on this composite device — cookies are assigned
     // per-interface, so the DPI-shift buttons flanking the wheel (their own, still-unmapped
     // interface) can independently land on the same reportID/cookie pair and falsely fire topB
@@ -265,7 +280,23 @@ final class NagaHIDManager: ObservableObject {
         // Bail before that call for all three; every other usage page is low-frequency enough
         // (button presses, not continuous) to log safely.
         if usagePage == 0x01 && (usage == 0x30 || usage == 0x31 || usage == 0x38) { return }
-        if usagePage == 0xFF00 && usage == 0x40 { return }
+        if usagePage == 0xFF00 && usage == 0x40 {
+            guard IOHIDElementGetCookie(element) == 102 else { return }
+            let tiltValue = IOHIDValueGetIntegerValue(value)
+            let now = CFAbsoluteTimeGetCurrent()
+            if tiltValue < 0 {
+                guard now - lastTiltRightFire > tiltDebounce else { return }
+                lastTiltRightFire = now
+                dbg("handleInput: wheel tilt right (cookie=102 value=\(tiltValue))")
+                DispatchQueue.main.async { self.onButtonPressed?("tiltRight") }
+            } else if tiltValue > 0 {
+                guard now - lastTiltLeftFire > tiltDebounce else { return }
+                lastTiltLeftFire = now
+                dbg("handleInput: wheel tilt left (cookie=102 value=\(tiltValue))")
+                DispatchQueue.main.async { self.onButtonPressed?("tiltLeft") }
+            }
+            return
+        }
         let intValue = IOHIDValueGetIntegerValue(value)
         dbg("handleInput: usagePage=\(String(format: "0x%02X", usagePage)) usage=\(String(format: "0x%02X", usage)) intValue=\(intValue)")
 
