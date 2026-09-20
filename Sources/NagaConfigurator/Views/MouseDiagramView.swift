@@ -131,7 +131,7 @@ struct MouseDiagramView: View {
                                 .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
                             SystemHotspotDot(engaged: engaged)
                                 .contentShape(Rectangle())
-                                .position(x: geo.size.width * x / 100 - 38, y: geo.size.height * y / 100)
+                                .position(x: geo.size.width * x / 100 + (spot.labelOnLeft ? 38 : -38), y: geo.size.height * y / 100)
                                 .help(spot.info)
                                 .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
                         }
