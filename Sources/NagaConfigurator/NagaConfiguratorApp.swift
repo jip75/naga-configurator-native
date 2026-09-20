@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @main
 struct NagaConfiguratorApp: App {
@@ -17,6 +18,31 @@ struct NagaConfiguratorApp: App {
 
     init() {
         _ = Self.appNapAssertion
+        Self.terminateIfAnotherInstanceIsRunning()
+    }
+
+    // The dev build (.build/.../NagaConfigurator, launched by hand via Terminal/Finder
+    // double-click) and the installed .app are two DIFFERENT code identities to macOS, so
+    // nothing stops both from running at once. When they do, they fight over the same
+    // exclusive resource — the CGEventTap that swallows/remaps key/button events — and which
+    // one "wins" depends on tap insertion order, producing exactly the random "sometimes this
+    // copy works, sometimes it doesn't" behavior reported across multiple sessions. Refusing to
+    // launch a second copy (whichever process gets here first stays; a later launch quits
+    // itself) makes that structurally impossible instead of relying on remembering not to do it.
+    private static func terminateIfAnotherInstanceIsRunning() {
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let others = NSWorkspace.shared.runningApplications.filter {
+            $0.processIdentifier != myPID && $0.executableURL?.lastPathComponent == "NagaConfigurator"
+        }
+        guard !others.isEmpty else { return }
+        NSLog("NagaConfiguratorApp: another instance (pid=\(others.map { $0.processIdentifier })) is already running — quitting rather than fight it for the HID event tap")
+        others.first?.activate(options: [.activateAllWindows])
+        let alert = NSAlert()
+        alert.messageText = "Naga Configurator is already running"
+        alert.informativeText = "Only one copy can safely remap the mouse at a time — running two at once makes buttons behave randomly. This copy is quitting; the one already running stays active."
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+        exit(0)
     }
 
     var body: some Scene {
