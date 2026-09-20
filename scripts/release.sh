@@ -25,8 +25,14 @@ swift build -c release
 echo "==> Assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/arm64-apple-macosx/release/NagaConfigurator "$APP/Contents/MacOS/NagaConfigurator"
+# SwiftPM's generated Bundle.module accessor (DerivedSources/resource_bundle_accessor.swift) looks
+# for this bundle at Bundle.main.bundleURL — the .app folder's own top level — not inside
+# Contents/Resources like a normal macOS resource. Putting it in Contents/Resources (the previous
+# behavior here) makes Bundle.module fail its lookup and fatalError() the instant the app tries to
+# load a bundled image, which is the exact "quits unexpectedly on launch" crash this was meant to
+# fix. Confirmed by running the built binary directly: the fatal error names this precise path.
 rsync -a --delete .build/arm64-apple-macosx/release/NagaConfigurator_NagaConfigurator.bundle/ \
-    "$APP/Contents/Resources/NagaConfigurator_NagaConfigurator.bundle/"
+    "$APP/NagaConfigurator_NagaConfigurator.bundle/"
 cp build/icon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # Without a real Info.plist, macOS can't reliably treat this folder as a proper app bundle —
