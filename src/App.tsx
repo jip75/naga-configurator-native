@@ -14,6 +14,7 @@ declare global {
       apply: () => Promise<boolean>
       pickApp: () => Promise<string | null>
       onButtonPressed: (cb: (rawCode: string) => void) => void
+      onError: (cb: (message: string) => void) => void
     }
   }
 }
@@ -23,6 +24,7 @@ function App() {
   const [mapping, setMapping] = useState<Record<string, Action>>({})
   const [lastFired, setLastFired] = useState<number | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     window.naga?.getMapping().then(setMapping)
@@ -33,6 +35,7 @@ function App() {
         setTimeout(() => setLastFired(null), 400)
       }
     })
+    window.naga?.onError((message) => setErrorMessage(message))
   }, [])
 
   const selectedButton = device.buttons.find((b) => b.number === selected)
@@ -66,6 +69,19 @@ function App() {
         />
         <SidePanel buttonNumber={selected} action={selectedAction} onChange={handleActionChange} />
       </div>
+
+      {errorMessage && (
+        <div
+          role="alert"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[90vw] rounded-lg px-4 py-3 text-sm font-mono flex items-center gap-3"
+          style={{ background: '#2a1414', border: '1px solid #ff5c5c66', color: '#ff9d9d', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+        >
+          <span>{errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} style={{ color: '#ff9d9d' }} aria-label="Dismiss">
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }

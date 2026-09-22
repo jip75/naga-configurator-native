@@ -10,4 +10,7 @@ contextBridge.exposeInMainWorld('naga', {
   onButtonPressed: (cb: (buttonNumber: number) => void) => {
     ipcRenderer.on('naga:button-pressed', (_event, buttonNumber: number) => cb(buttonNumber))
   },
+  onError: (cb: (message: string) => void) => {
+    ipcRenderer.on('naga:error-log', (_event, message: string) => cb(message))
+  },
 })
