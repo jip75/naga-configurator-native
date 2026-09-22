@@ -206,8 +206,17 @@ stdinQueue.async {
         guard let data = line.data(using: .utf8) else { continue }
         if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let mouseButton = obj["mouse"] as? String {
             injectMouse(mouseButton)
-        } else if let command = try? JSONDecoder().decode(InjectCommand.self, from: data) {
+            continue
+        }
+        // Previously `try?` here silently swallowed a bad/malformed inject command (e.g. a
+        // saved mapping with a missing or non-numeric keyCode) — the button would still light
+        // up on press but nothing would ever be posted, with no way to tell why. Log it instead:
+        // stderr is piped up to the Electron side's 'error-log' event, which now reaches the UI.
+        do {
+            let command = try JSONDecoder().decode(InjectCommand.self, from: data)
             inject(command)
+        } catch {
+            logErr("naga-hid-helper: failed to decode inject command: \(error)")
         }
     }
 }

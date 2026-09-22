@@ -151,8 +151,14 @@ export class NagaBridge extends EventEmitter {
   }
 
   save() {
-    fs.mkdirSync(path.dirname(mappingFilePath()), { recursive: true })
-    fs.writeFileSync(mappingFilePath(), JSON.stringify(this.mapping, null, 2))
+    const target = mappingFilePath()
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    // Write to a temp file and rename over the real one — renameSync is atomic on the same
+    // volume, so a kill/crash mid-write can never leave mapping.json half-written/corrupted
+    // (which previously made every button's saved customization reset to defaults on next load).
+    const tmp = target + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(this.mapping, null, 2))
+    fs.renameSync(tmp, target)
   }
 
   onButton(listener: ButtonListener) {
@@ -177,7 +183,15 @@ export class NagaBridge extends EventEmitter {
       const code = msg.code as RawButtonCode
       this.emit('button', code)
       const action = this.mapping[code]
-      if (action) this.dispatch(action)
+      if (action) {
+        // A malformed/corrupted saved mapping must never take down the whole
+        // helper process (which would kill every other button until relaunch).
+        try {
+          this.dispatch(action)
+        } catch (err) {
+          this.emit('error-log', `button "${code}" failed to dispatch: ${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
     }
   }
 
@@ -196,6 +210,8 @@ export class NagaBridge extends EventEmitter {
         if (action.system) this.injectSystemShortcut(action)
         else this.inject(action)
         break
+      default:
+        this.emit('error-log', `unrecognized action kind "${(action as { kind?: string }).kind}" — nothing to dispatch`)
     }
   }
 
@@ -208,6 +224,10 @@ export class NagaBridge extends EventEmitter {
   }
 
   private injectMacro(action: MacroAction) {
+    if (!Array.isArray(action.steps)) {
+      this.emit('error-log', 'macro action has no steps array — saved mapping may be corrupted')
+      return
+    }
     const run = (i: number) => {
       if (i >= action.steps.length) return
       const step = action.steps[i]

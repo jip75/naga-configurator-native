@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { registerIpcHandlers } from './ipc'
+import { nagaBridge } from './hid-capture'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const isDev = !app.isPackaged
@@ -59,6 +60,7 @@ function createTray() {
         label: 'Quit',
         click: () => {
           isQuitting = true
+          nagaBridge.save()
           app.quit()
         },
       },
@@ -77,6 +79,10 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  // Any live edits made via setMapping() but never explicitly Saved would
+  // otherwise be lost silently on quit (Cmd+Q, a crash, etc.) — persist
+  // whatever is currently in memory as a last resort.
+  nagaBridge.save()
 })
 
 app.on('window-all-closed', () => {

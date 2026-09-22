@@ -24,6 +24,10 @@ export function MacroRecorder({ value, onChange }: MacroRecorderProps) {
 
   function stopRecording() {
     setRecording(false)
+    // Stopping before any key was pressed (e.g. clicking away by accident)
+    // must not save an empty macro — it would look configured but silently
+    // do nothing on every press, with no error to explain why.
+    if (steps.length === 0) return
     onChange({ kind: 'macro', steps })
   }
 
