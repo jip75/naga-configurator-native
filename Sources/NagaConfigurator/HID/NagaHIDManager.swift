@@ -16,6 +16,10 @@ final class NagaHIDManager: ObservableObject {
     @Published private(set) var connected = false
     @Published private(set) var activeLayer: HyperLayer = .base
     @Published var lastFiredButton: Int?
+    // Previously a dispatch failure (e.g. the Mission Control button's `open -a` call failing)
+    // only went to the debug log file — invisible in the actual running app, so a real failure
+    // looked identical to a button silently doing nothing. Surfaced to the UI instead.
+    @Published var lastError: String?
 
     var onButtonPressed: ((String) -> Void)?
 
@@ -517,6 +521,7 @@ final class NagaHIDManager: ObservableObject {
                 dbg("dispatch: launched '\(process.executableURL!.path) \(process.arguments!.joined(separator: " "))' pid=\(process.processIdentifier)")
             } catch {
                 dbg("dispatch: FAILED to launch '\(appName)': \(error)")
+                lastError = "Couldn't open \"\(appName)\": \(error.localizedDescription)"
             }
         case .layerToggle:
             guard let target = action.targetLayer else { return }

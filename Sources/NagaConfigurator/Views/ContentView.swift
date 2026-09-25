@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import Combine
 
 enum SaveState { case clean, dirty, saving, saved }
 
@@ -138,6 +140,7 @@ struct ContentView: View {
         }
         .foregroundColor(Theme.fg)
         .background(Theme.bg)
+        .overlay(alignment: .bottom) { errorBanner }
         .onAppear {
             // Each layer stands on its own (no fallback to base) — same rule as the Electron
             // app's NagaBridge.handleLine.
@@ -149,6 +152,34 @@ struct ContentView: View {
                     hid.debugLog("onButtonPressed: no action resolved for rawCode=\(rawCode)")
                 }
             }
+        }
+        // Editing a mapping and quitting (Cmd+Q, Dock > Quit, etc.) without clicking Save used
+        // to lose that edit silently — nothing wrote it to disk until the explicit Save button.
+        // Force a save here as a last resort if there's anything unsaved.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            save()
+        }
+    }
+
+    @ViewBuilder private var errorBanner: some View {
+        if let message = hid.lastError {
+            HStack(spacing: 12) {
+                Text(message)
+                    .font(.system(size: 12, design: .monospaced))
+                Spacer(minLength: 8)
+                Button("✕") { hid.lastError = nil }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.red.opacity(0.12))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.4), lineWidth: 1))
+            .cornerRadius(10)
+            .foregroundColor(.red)
+            .padding(.bottom, 20)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.easeOut(duration: 0.2), value: hid.lastError)
         }
     }
 

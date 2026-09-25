@@ -72,7 +72,9 @@ struct MacroRecorderView: View {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         recording = false
-        if commit { onChange(.macro(steps)) }
+        // Stopping before any key was pressed must not save an empty macro — it would show as a
+        // normal-looking "Macro (0 steps)" that silently does nothing on every press.
+        if commit && !steps.isEmpty { onChange(.macro(steps)) }
     }
 
     private func removeStep(_ i: Int) {
