@@ -16,8 +16,8 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-naga-notary}"
 APP=build/NagaConfigurator.app
 DMG=build/NagaConfigurator.dmg
 BUNDLE_ID=io.mkrlab.naga-configurator-native
-SHORT_VERSION=1.1.0
-BUILD_VERSION=2
+SHORT_VERSION=1.1.1
+BUILD_VERSION=3
 
 echo "==> Building release binary"
 swift build -c release
@@ -96,9 +96,41 @@ fi
 
 echo "==> Building DMG"
 rm -f "$DMG"
-hdiutil create -volname "Naga Configurator" -srcfolder "$APP" -ov -format UDZO "$DMG"
+# Stage in a folder alongside a symlink to /Applications — a bare -srcfolder "$APP" drops the
+# .app in with no drag-to-install affordance, so a first-time user has to run it straight from
+# the mounted volume instead of dragging it in like every other Mac app.
+STAGING=build/dmg-staging
+rm -rf "$STAGING"
+mkdir -p "$STAGING"
+cp -R "$APP" "$STAGING/"
+ln -s /Applications "$STAGING/Applications"
+hdiutil create -volname "Naga Configurator" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
+rm -rf "$STAGING"
 
-echo "==> Gatekeeper check"
+echo "==> Signing DMG with Developer ID"
+# The .app inside is notarized+stapled above, but the DMG container itself was shipping
+# unsigned — spctl --type open rejects an unsigned, unstapled DMG ("Insufficient Context").
+# It doesn't hard-block a launch (Gatekeeper's real checkpoint is the .app, which macOS runs via
+# App Translocation regardless), but it's not the clean "double-click, no warnings" experience
+# the download page promises, so sign+notarize+staple the DMG too, same as the app.
+codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"
+codesign -dv --verbose=2 "$DMG"
+
+if xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+    echo "==> Notarizing DMG (profile '$NOTARY_PROFILE' found)"
+    xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$DMG"
+else
+    echo "==> Skipping DMG notarization: no keychain profile named '$NOTARY_PROFILE'."
+fi
+
+echo "==> Gatekeeper check (app)"
 spctl -a -vv --type execute "$APP" || true
+
+echo "==> Gatekeeper check (dmg)"
+# A bare disk image needs --context context:primary-signature or spctl misreports a correctly
+# notarized/stapled DMG as "rejected, source=Insufficient Context" — confirmed by hand 2026-09-25,
+# not a real Gatekeeper problem, just the wrong spctl invocation for testing a standalone DMG.
+spctl -a -vv --type open --context context:primary-signature "$DMG" || true
 
 echo "Done: $APP, $DMG"
