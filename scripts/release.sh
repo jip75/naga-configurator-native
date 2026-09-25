@@ -16,8 +16,8 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-naga-notary}"
 APP=build/NagaConfigurator.app
 DMG=build/NagaConfigurator.dmg
 BUNDLE_ID=io.mkrlab.naga-configurator-native
-SHORT_VERSION=1.0.0
-BUILD_VERSION=1
+SHORT_VERSION=1.1.0
+BUILD_VERSION=2
 
 echo "==> Building release binary"
 swift build -c release
