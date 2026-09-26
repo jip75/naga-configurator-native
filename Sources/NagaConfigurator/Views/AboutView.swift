@@ -19,6 +19,7 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
                 whySection
+                knownBugsSection
                 defaultsSection
             }
             .padding(28)
@@ -50,6 +51,27 @@ struct AboutView: View {
             it to, so I built this configurator from scratch: a native macOS app that reads the \
             mouse's raw button signals directly and maps them to whatever I need, per app, per \
             layer.
+            """)
+            .font(.system(size: 13))
+            .foregroundColor(Theme.fg)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(Theme.panel)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+        .cornerRadius(14)
+    }
+
+    private var knownBugsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Known bug")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Theme.hyper)
+            Text("""
+            The top two DPI buttons are still flaky. Sometimes a press needs a second click to \
+            register; sometimes you have to alternate — click the other top button, then back — \
+            before either one takes. Occasionally they stop responding altogether, and the only \
+            fix is quitting Naga Configurator and reopening it. Still chasing the root cause.
             """)
             .font(.system(size: 13))
             .foregroundColor(Theme.fg)
