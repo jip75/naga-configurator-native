@@ -9,6 +9,9 @@ enum ModifierFlag: String, Codable, CaseIterable {
 
 enum ActionKind: String, Codable {
     case key, mouse, macro, launch, layerToggle
+    /// Name only, no action — lets a button with nothing assigned (e.g. the wheel, which keeps
+    /// its native behavior) still carry a custom name. Dispatch does nothing.
+    case none
 }
 
 struct MacroStep: Codable, Equatable, Identifiable {
@@ -98,6 +101,8 @@ struct Action: Codable, Equatable {
             return base.hasSuffix(".app") ? String(base.dropLast(4)) : base
         case .layerToggle:
             return targetLayer?.label ?? "HyperShift"
+        case .none:
+            return "Unassigned"
         }
     }
 }

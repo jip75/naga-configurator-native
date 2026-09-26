@@ -146,7 +146,7 @@ struct ContentView: View {
             // app's NagaBridge.handleLine.
             hid.onButtonPressed = { rawCode in
                 // Unassigned wheel notches are the common case — bail before the synchronous log.
-                if (rawCode == "scrollUp" || rawCode == "scrollDown"), mapping[rawCode]?.action(for: hid.activeLayer) == nil { return }
+                if (rawCode == "scrollUp" || rawCode == "scrollDown"), (mapping[rawCode]?.action(for: hid.activeLayer)).map({ $0.kind == .none }) ?? true { return }
                 hid.debugLog("onButtonPressed: rawCode=\(rawCode) activeLayer=\(hid.activeLayer) entry=\(String(describing: mapping[rawCode]))")
                 if let action = mapping[rawCode]?.action(for: hid.activeLayer) {
                     // Left/Right Click always do their normal click too (can't be suppressed), so:

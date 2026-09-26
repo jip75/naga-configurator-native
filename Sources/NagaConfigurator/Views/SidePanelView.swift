@@ -29,6 +29,7 @@ private func railID(for kind: ActionKind) -> String {
     case .macro: return "Macro"
     case .launch: return "Launch"
     case .layerToggle: return "HyperShift Assign"
+    case .none: return "Keyboard Function"
     }
 }
 
@@ -229,7 +230,9 @@ struct SidePanelView: View {
     }
 
     private func commitLabel() {
-        guard var current = action else { return }
+        // A button with nothing assigned still keeps its name: wrap it in a name-only action.
+        // (Previously this bailed, so naming an unassigned wheel/tilt/click silently didn't save.)
+        guard var current = action ?? (labelText.isEmpty ? nil : Action(kind: .none)) else { return }
         current.label = labelText
         onChange(current)
     }

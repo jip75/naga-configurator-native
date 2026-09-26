@@ -567,6 +567,8 @@ final class NagaHIDManager: ObservableObject {
                 dbg("dispatch: FAILED to launch '\(appName)': \(error)")
                 lastError = "Couldn't open \"\(appName)\": \(error.localizedDescription)"
             }
+        case .none:
+            return
         case .layerToggle:
             guard let target = action.targetLayer else { return }
             activeLayer = activeLayer == target ? .base : target
