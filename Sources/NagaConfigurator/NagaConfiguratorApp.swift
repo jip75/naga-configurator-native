@@ -74,6 +74,9 @@ struct NagaConfiguratorApp: App {
                     #endif
                 }
         }
+        // 621x643 content = the 621x671 window (28pt title bar) Jorivan picked 2026-09-26 as the
+        // opening size — just above the 620x640 floor, so the diagram opens tight, not sprawling.
+        .defaultSize(width: 621, height: 643)
         .windowResizability(.contentSize)
     }
 }

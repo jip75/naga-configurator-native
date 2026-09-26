@@ -3,60 +3,96 @@ import SwiftUI
 enum DiagramView: CaseIterable { case top, side }
 
 /// A control that exists on the mouse but isn't part of the 12-button left/right column layout.
-/// All three are now plain customizable buttons (rawCode "scrollClick"/"topA"/"topB", same
-/// mapping/dispatch pipeline as 1-12), so their `rawCode` is non-nil and their displayed label
-/// comes from whatever action is actually assigned, not a fixed string. Scroll Click is the one
-/// exception worth flagging in its `info` tooltip: exclusive HID device access is a confirmed
-/// dead end on this OS (see NagaHIDManager's header comment), so the wheel-click's standard
-/// system middle-click keeps firing on top of whatever custom action gets assigned here — same
-/// honest-about-limits spirit as NAV_TAB_COPY, just "both fire" instead of "not configurable".
+/// Scroll Click, the two top buttons and the two wheel tilts are plain customizable buttons
+/// (rawCode "scrollClick"/"topA"/"topB"/"tiltLeft"/"tiltRight", same mapping/dispatch pipeline as
+/// 1-12), so their displayed label comes from whatever action is actually assigned. Left/Right
+/// Click are shown for orientation only (rawCode nil, not selectable): remapping the primary
+/// click from software is how people lock themselves out of their own mouse. Scroll Click and the
+/// tilts are worth flagging in their `info` tooltip: exclusive HID device access is a confirmed
+/// dead end on this OS (see NagaHIDManager's header comment), so the wheel's own system behavior
+/// keeps firing on top of whatever custom action gets assigned — same honest-about-limits spirit
+/// as NAV_TAB_COPY, just "both fire" instead of "not configurable".
+private enum LabelSide { case left, right, above }
+
 private struct SystemHotspot {
     let fallbackLabel: String
     let info: String
     let rawCode: String?
-    let topXY: (Double, Double)
-    let sideXY: (Double, Double)
-    var labelOnLeft: Bool = false
-
-    func xy(for view: DiagramView) -> (Double, Double) { view == .top ? topXY : sideXY }
+    /// Top view: percent of the fitted top-view IMAGE rect (not the whole diagram frame), so the
+    /// dot lands on the real control no matter how the window scales. nil = not shown in top view.
+    let topXY: (Double, Double)?
+    /// Side view: percent of the diagram frame (legacy coordinates). nil = not shown in side view.
+    let sideXY: (Double, Double)?
+    var topLabelSide: LabelSide = .right
+    var sideLabelOnLeft: Bool = false
 }
 
+// Top-view coordinates measured off naga-left-handed-top.png (676x1250): wheel ~(55%, 27-38%),
+// front top button ~(55%, 41.5%), rear top button ~(55%, 47.6%), left/right click tips ~(35%/77%, 22%).
+// The center stack is spaced ~6% apart and labels to the LEFT — the right half of the art is
+// where the 12-button side-grid dots live, and right-hand labels ran straight over them.
 private let systemHotspots: [SystemHotspot] = [
+    SystemHotspot(
+        fallbackLabel: "Left Click",
+        info: "Primary click — shown for orientation only. It's intentionally not remappable: reassigning the main click from software can leave you unable to click your way back.",
+        rawCode: nil,
+        topXY: (35, 24), sideXY: nil,
+        topLabelSide: .above
+    ),
+    SystemHotspot(
+        fallbackLabel: "Right Click",
+        info: "Secondary click — shown for orientation only. It's intentionally not remappable: reassigning a system click from software can leave you unable to click your way back.",
+        rawCode: nil,
+        topXY: (77, 24), sideXY: nil,
+        topLabelSide: .above
+    ),
+    SystemHotspot(
+        fallbackLabel: "Tilt Left",
+        info: "Wheel tilt left — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
+        rawCode: "tiltLeft",
+        topXY: (49, 29.5), sideXY: (24, 1),
+        topLabelSide: .left, sideLabelOnLeft: true
+    ),
+    SystemHotspot(
+        fallbackLabel: "Tilt Right",
+        info: "Wheel tilt right — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
+        rawCode: "tiltRight",
+        topXY: (61, 29.5), sideXY: (42, 1)
+    ),
     SystemHotspot(
         fallbackLabel: "Scroll Click",
         info: "Customizable, same as buttons 1-12. The wheel's standard system middle-click also keeps firing alongside whatever you assign here — that part can't be intercepted from software.",
         rawCode: "scrollClick",
-        topXY: (48, 14), sideXY: (33, 6)
+        topXY: (55, 35.5), sideXY: (33, 6),
+        topLabelSide: .left
     ),
     SystemHotspot(
         fallbackLabel: "Unassigned",
         info: "Front button behind the wheel — customizable, same as buttons 1-12. Defaults to toggling the HyperShift layer. Also shifts cursor speed via the mouse's own onboard firmware, independent of this app — not something this app can change or turn off.",
         rawCode: "topA",
-        topXY: (48, 25.5), sideXY: (33, 17)
+        topXY: (55, 41.5), sideXY: (33, 17),
+        topLabelSide: .left
     ),
     SystemHotspot(
         fallbackLabel: "Unassigned",
         info: "Rear button behind the wheel — customizable, same as buttons 1-12. Also shifts cursor speed via the mouse's own onboard firmware, independent of this app — not something this app can change or turn off.",
         rawCode: "topB",
-        topXY: (48, 37), sideXY: (33, 29)
+        topXY: (55, 47.6), sideXY: (33, 29),
+        topLabelSide: .left
     ),
     // "bottomButton" hotspot removed 2026-09-11 — usage 0x09/0x02 turned out to be this mouse's
     // ordinary secondary click, not a distinct physical control. See Action.swift's DefaultMapping
     // and NagaHIDManager's dpiUsageToRawCode comments.
-    SystemHotspot(
-        fallbackLabel: "Unassigned",
-        info: "Wheel tilt left — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
-        rawCode: "tiltLeft",
-        topXY: (40, 5), sideXY: (24, 1),
-        labelOnLeft: true
-    ),
-    SystemHotspot(
-        fallbackLabel: "Unassigned",
-        info: "Wheel tilt right — customizable, same as buttons 1-12. The mouse's own default horizontal-scroll behavior also keeps firing alongside whatever you assign here — that part can't be intercepted from software, same as Scroll Click.",
-        rawCode: "tiltRight",
-        topXY: (57, 5), sideXY: (42, 1)
-    ),
 ]
+
+/// Aspect-fit rect of an image of `imageSize` inside `container` — mirrors what
+/// `.aspectRatio(contentMode: .fit)` does, so overlay dots can target the art itself.
+private func fittedRect(imageSize: CGSize, in container: CGSize) -> CGRect {
+    let scale = min(container.width / imageSize.width, container.height / imageSize.height)
+    let w = imageSize.width * scale, h = imageSize.height * scale
+    return CGRect(x: (container.width - w) / 2, y: (container.height - h) / 2, width: w, height: h)
+}
+private let topImageSize = CGSize(width: 676, height: 1250)
 
 struct MouseDiagramView: View {
     let view: DiagramView
@@ -92,6 +128,29 @@ struct MouseDiagramView: View {
     private var badgeSize: CGFloat { lerp(24, 28, t: wt) }
     private var vPadding: CGFloat { lerp(16, 24, t: ht) }
 
+    private func point(for spot: SystemHotspot, in size: CGSize) -> CGPoint? {
+        if view == .top {
+            guard let (x, y) = spot.topXY else { return nil }
+            let r = fittedRect(imageSize: topImageSize, in: size)
+            return CGPoint(x: r.minX + r.width * x / 100, y: r.minY + r.height * y / 100)
+        }
+        guard let (x, y) = spot.sideXY else { return nil }
+        return CGPoint(x: size.width * x / 100, y: size.height * y / 100)
+    }
+
+    private func labelSide(for spot: SystemHotspot) -> LabelSide {
+        view == .top ? spot.topLabelSide : (spot.sideLabelOnLeft ? .left : .right)
+    }
+
+    /// Label frames are 110pt wide; offset their center so the text starts 10pt clear of the dot.
+    private func labelPosition(for p: CGPoint, side: LabelSide) -> CGPoint {
+        switch side {
+        case .left: return CGPoint(x: p.x - 65, y: p.y)
+        case .right: return CGPoint(x: p.x + 65, y: p.y)
+        case .above: return CGPoint(x: p.x, y: p.y - 17)
+        }
+    }
+
     var body: some View {
         HStack(spacing: rowSpacing) {
             VStack(alignment: .trailing, spacing: lerp(12, 20, t: ht)) {
@@ -117,23 +176,25 @@ struct MouseDiagramView: View {
                         }
 
                         ForEach(Array(systemHotspots.enumerated()), id: \.offset) { _, spot in
-                            let (x, y) = spot.xy(for: view)
-                            let assigned = spot.rawCode.flatMap { mapping[$0] ?? nil }
-                            let engaged = spot.rawCode != nil && (
-                                selectedTop == spot.rawCode ||
-                                (assigned?.kind == .layerToggle && assigned?.targetLayer != nil &&
-                                 (assigned?.targetLayer == activeLayer || assigned?.targetLayer == editLayer))
-                            )
-                            SystemHotspotLabel(text: assigned?.displayLabel ?? spot.fallbackLabel, engaged: engaged, alignLeading: !spot.labelOnLeft)
-                                .frame(width: 100, alignment: spot.labelOnLeft ? .trailing : .leading)
-                                .contentShape(Rectangle())
-                                .position(x: geo.size.width * x / 100 + (spot.labelOnLeft ? -58 : 58), y: geo.size.height * y / 100)
-                                .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
-                            SystemHotspotDot(engaged: engaged)
-                                .contentShape(Rectangle())
-                                .position(x: geo.size.width * x / 100 + (spot.labelOnLeft ? 38 : -38), y: geo.size.height * y / 100)
-                                .help(spot.info)
-                                .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
+                            if let p = point(for: spot, in: geo.size) {
+                                let assigned = spot.rawCode.flatMap { mapping[$0] ?? nil }
+                                let engaged = spot.rawCode != nil && (
+                                    selectedTop == spot.rawCode ||
+                                    (assigned?.kind == .layerToggle && assigned?.targetLayer != nil &&
+                                     (assigned?.targetLayer == activeLayer || assigned?.targetLayer == editLayer))
+                                )
+                                let side = labelSide(for: spot)
+                                SystemHotspotLabel(text: assigned?.displayLabel ?? spot.fallbackLabel, engaged: engaged, fixed: spot.rawCode == nil)
+                                    .frame(width: 110, alignment: side == .left ? .trailing : (side == .right ? .leading : .center))
+                                    .contentShape(Rectangle())
+                                    .position(labelPosition(for: p, side: side))
+                                    .help(spot.info)
+                                    .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
+                                SystemHotspotDot(engaged: engaged, fixed: spot.rawCode == nil)
+                                    .position(p)
+                                    .help(spot.info)
+                                    .onTapGesture { if let code = spot.rawCode { onSelectTop(code) } }
+                            }
                         }
                     }
                 }
@@ -200,27 +261,32 @@ struct ViewAngleThumbnailsView: View {
 
 private struct SystemHotspotDot: View {
     let engaged: Bool
+    var fixed: Bool = false
     var body: some View {
         Circle()
-            .strokeBorder(engaged ? Theme.accent : Theme.muted, lineWidth: 2)
+            .strokeBorder(engaged ? Theme.accent : Theme.muted.opacity(fixed ? 0.6 : 1), lineWidth: 2)
             .background(Circle().fill(engaged ? Theme.accent.opacity(0.25) : Theme.bg))
-            .frame(width: 13, height: 13)
+            .frame(width: fixed ? 9 : 11, height: fixed ? 9 : 11)
             .shadow(color: engaged ? Theme.accentDim : .clear, radius: 4)
-            .frame(width: 26, height: 26)
+            .frame(width: 20, height: 20)
             .contentShape(Rectangle())
     }
 }
 
+/// Small dark pill behind each label so it stays legible where it sits on top of the mouse art.
 private struct SystemHotspotLabel: View {
     let text: String
     let engaged: Bool
-    var alignLeading: Bool = true
+    var fixed: Bool = false
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(engaged ? Theme.accentText : Theme.muted)
+            .font(.system(size: 10.5, weight: .semibold))
+            .foregroundColor(engaged ? Theme.accentText : Theme.muted.opacity(fixed ? 0.8 : 1))
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1.5)
+            .background(Capsule().fill(Theme.bg.opacity(0.72)))
     }
 }
 
