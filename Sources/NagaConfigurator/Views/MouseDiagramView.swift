@@ -190,6 +190,9 @@ struct MouseDiagramView: View {
 /// A small view-angle thumbnail strip (Synapse shows this row under the mouse illustration) —
 /// exactly the 2 angles this app has real art for: top-down and the side-angle cutout. Sized up
 /// from the original 44pt icons for legibility — this is the row users kept missing/mis-tapping.
+/// Bumped 60->76pt and forced .high interpolation: the source art (676x1250 / 430x750) is plenty
+/// sharp at diagram size, but shrinking it ~7x down to a 60pt frame aliased the thin leader-line
+/// art enough to look pixelated — a smaller minification ratio plus explicit resampling fixes it.
 struct ViewAngleThumbnailsView: View {
     @Binding var selection: DiagramView
 
@@ -207,8 +210,10 @@ struct ViewAngleThumbnailsView: View {
                     VStack(spacing: 8) {
                         Image(bundled: imageName(for: angle))
                             .resizable()
+                            .interpolation(.high)
+                            .antialiased(true)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 76, height: 76)
                             .padding(8)
                             .background(Theme.bg)
                             .overlay(
