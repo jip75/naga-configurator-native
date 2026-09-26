@@ -17,7 +17,7 @@ private let RAIL: [RailItem] = [
     RailItem(id: "Keyboard Function", icon: "keyboard", tooltip: "Keyboard Function", kind: .key),
     RailItem(id: "Mouse Function", icon: "computermouse", tooltip: "Mouse Function", kind: .mouse),
     RailItem(id: "Macro", icon: "record.circle", tooltip: "Macro", kind: .macro),
-    RailItem(id: "Launch", icon: "arrow.up.forward.app", tooltip: "Launch App", kind: .launch),
+    RailItem(id: "Launch", icon: "arrow.up.forward.app", tooltip: "Launch an App or File", kind: .launch),
     RailItem(id: "HyperShift Assign", icon: "bolt.fill", tooltip: "Toggle a HyperShift layer", kind: .layerToggle),
     RailItem(id: "Switch Profile", icon: "square.stack.3d.up", tooltip: "Switch Profile — not wired up yet (single profile only)", kind: nil),
 ]
@@ -224,7 +224,7 @@ struct SidePanelView: View {
         case "Mouse Function": return "CLICK"
         case "Macro": return "SEQUENCE"
         case "HyperShift Assign": return "LAYER"
-        default: return "APPLICATION"
+        default: return "APP OR FILE"
         }
     }
 

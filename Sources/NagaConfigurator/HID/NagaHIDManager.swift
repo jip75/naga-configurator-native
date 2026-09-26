@@ -512,6 +512,25 @@ final class NagaHIDManager: ObservableObject {
                 // fresh interactive capture every time regardless of prior state.
                 process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
                 process.arguments = ["-i"]
+            } else if appName.hasPrefix("/") && !appName.hasSuffix(".app") {
+                // A file picked via "Choose a File…": run it if it's an executable (script or
+                // binary with +x), otherwise hand it to its default app. .command files are
+                // executable too, but `open` is what gives them their Terminal window, so they
+                // go the `open` route on purpose.
+                var isDir: ObjCBool = false
+                let fm = FileManager.default
+                guard fm.fileExists(atPath: appName, isDirectory: &isDir) else {
+                    lastError = "Couldn't find \"\((appName as NSString).lastPathComponent)\" — it may have been moved or deleted."
+                    return
+                }
+                if !isDir.boolValue && fm.isExecutableFile(atPath: appName) && !appName.hasSuffix(".command") {
+                    process.executableURL = URL(fileURLWithPath: appName)
+                    process.arguments = []
+                    process.currentDirectoryURL = URL(fileURLWithPath: appName).deletingLastPathComponent()
+                } else {
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                    process.arguments = [appName]
+                }
             } else {
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
                 process.arguments = ["-a", appName]
