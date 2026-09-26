@@ -108,7 +108,10 @@ final class NagaHIDManager: ObservableObject {
     // physical control). Dispatching Mission Control on it was hijacking ordinary clicks system-wide,
     // including inside this app's own hotspot selection. Left empty — do not remap usage 0x02
     // without new isolated-capture evidence that it's actually a separate control.
-    private static let dpiUsageToRawCode: [UInt32: String] = [:]
+    // 2026-09-26: usages 1/2 now route to the customizable "leftClick"/"rightClick" controls.
+    // ContentView's onButtonPressed guards them (skips a same-as-native assignment, and never fires
+    // while this app is frontmost), so the old "hijacks every click" failure can't recur by default.
+    private static let dpiUsageToRawCode: [UInt32: String] = [1: "leftClick", 2: "rightClick"]
 
     func start() {
         guard manager == nil else { return }

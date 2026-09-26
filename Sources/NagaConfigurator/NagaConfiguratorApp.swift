@@ -78,5 +78,23 @@ struct NagaConfiguratorApp: App {
         // opening size — just above the 620x640 floor, so the diagram opens tight, not sprawling.
         .defaultSize(width: 621, height: 643)
         .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(after: .help) { ReportMenuItem() }
+        }
+
+        Window("Report a Bug or Idea", id: ReportWindow.id) {
+            ReportView()
+                .preferredColorScheme(appearance.colorScheme)
+        }
+        .windowResizability(.contentSize)
+    }
+}
+
+enum ReportWindow { static let id = "report" }
+
+private struct ReportMenuItem: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("Report a Bug or Idea…") { openWindow(id: ReportWindow.id) }
     }
 }

@@ -9,6 +9,7 @@ private let TOP_BUTTON_ORDER: [(rawCode: String, label: String)] = [
 ]
 
 struct AboutView: View {
+    @Environment(\.openWindow) private var openWindow
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
@@ -32,6 +33,8 @@ struct AboutView: View {
             Text("Version \(appVersion) — MkrLab.io, a Jorivan LLC company")
                 .font(.system(size: 12))
                 .foregroundColor(Theme.muted)
+            Button("Report a Bug or Idea…") { openWindow(id: ReportWindow.id) }
+                .padding(.top, 8)
         }
     }
 

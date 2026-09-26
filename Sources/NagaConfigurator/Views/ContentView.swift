@@ -147,6 +147,14 @@ struct ContentView: View {
             hid.onButtonPressed = { rawCode in
                 hid.debugLog("onButtonPressed: rawCode=\(rawCode) activeLayer=\(hid.activeLayer) entry=\(String(describing: mapping[rawCode]))")
                 if let action = mapping[rawCode]?.action(for: hid.activeLayer) {
+                    // Left/Right Click always do their normal click too (can't be suppressed), so:
+                    // an assignment identical to that click would double-click → skip; and never
+                    // fire while this app is in front, so a bad assignment can always be fixed here.
+                    if rawCode == "leftClick" || rawCode == "rightClick" {
+                        let native: MouseButton = rawCode == "leftClick" ? .left : .right
+                        if action.kind == .mouse && action.button == native { return }
+                        if NSApp.isActive { return }
+                    }
                     hid.dispatch(action)
                 } else {
                     hid.debugLog("onButtonPressed: no action resolved for rawCode=\(rawCode)")
@@ -207,6 +215,8 @@ struct ContentView: View {
         case "topA": return "Front Top Button"
         case "topB": return "Rear Top Button"
         case "scrollClick": return "Scroll Click"
+        case "leftClick": return "Left Click"
+        case "rightClick": return "Right Click"
         case "tiltLeft": return "Wheel Tilt Left"
         case "tiltRight": return "Wheel Tilt Right"
         default: return rawCode

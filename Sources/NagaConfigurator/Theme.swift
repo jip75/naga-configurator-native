@@ -32,6 +32,10 @@ enum Theme {
     // black foreground content, so one vivid shade reads fine in both modes.
     static let accent = Color(red: 0x2e / 255, green: 0xe6 / 255, blue: 0x68 / 255)
     static let accentDim = accent.opacity(0.35)
+    /// HyperShift layers read orange, Standard reads green — same cue Synapse uses, so it's obvious
+    /// at a glance which layer you're editing.
+    static let hyper = Color(red: 0xf0 / 255, green: 0x9a / 255, blue: 0x2e / 255)
+    static func layerTint(_ layer: HyperLayer) -> Color { layer == .base ? accent : hyper }
     // Accent used AS TEXT on the app's own bg/panel needs its own dynamic shade: the vivid fill
     // green above is ~1.4:1 on white (fails badly), so light mode gets a deep forest green instead
     // (~6.4:1 on white); dark mode keeps the vivid green (already high-contrast on near-black).
