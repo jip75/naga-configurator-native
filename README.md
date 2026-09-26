@@ -39,7 +39,9 @@ and turns each one into whatever you actually want — a shortcut, a click, an a
   itself, and software can't intercept them.)
 - **Saves locally** to `~/Library/Application Support/NagaConfigurator/mapping.json`, so your setup
   survives app updates and reinstalls.
-- **No network access.** The app doesn't make any network requests.
+- **One network call, and only if you make it.** Everything else runs offline — the only time the
+  app talks to the network is when you click **Report a Bug or Idea**, which sends your message
+  (plus the app and macOS version) to mkrlab.io.
 
 Not wired up yet (the tabs are there, but they say so honestly instead of showing fake controls):
 DPI and polling rate, scroll-wheel tuning, and Chroma lighting — the mouse keeps whatever RGB profile
