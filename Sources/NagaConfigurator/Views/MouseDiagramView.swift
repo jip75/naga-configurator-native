@@ -38,10 +38,16 @@ private let topControls: [TopControl] = [
                xy: (76, 25), onLeft: false, row: 0),
     TopControl(rawCode: "scrollClick", fallbackLabel: "Scroll Click",
                info: "Pressing the wheel. Its normal middle-click always happens — anything you assign here fires in addition to it.",
-               xy: (55, 34), onLeft: false, row: 2),
+               xy: (55, 33.5), onLeft: true, row: 1),
     TopControl(rawCode: "tiltRight", fallbackLabel: "Repeat Scroll Right",
                info: "Wheel tilt right. By default it scrolls right (repeats while held). Anything you assign here fires in addition to that.",
-               xy: (60, 30), onLeft: false, row: 1),
+               xy: (60, 31), onLeft: false, row: 2),
+    TopControl(rawCode: "scrollUp", fallbackLabel: "Scroll Up",
+               info: "Rolling the wheel up. It always scrolls normally too — anything you assign here fires in addition, at most about 4 times a second.",
+               xy: (56.5, 28.5), onLeft: false, row: 1),
+    TopControl(rawCode: "scrollDown", fallbackLabel: "Scroll Down",
+               info: "Rolling the wheel down. It always scrolls normally too — anything you assign here fires in addition, at most about 4 times a second.",
+               xy: (56.5, 37.5), onLeft: false, row: 3),
 ]
 
 private let topImageSize = CGSize(width: 676, height: 1250)

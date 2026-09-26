@@ -145,6 +145,8 @@ struct ContentView: View {
             // Each layer stands on its own (no fallback to base) — same rule as the Electron
             // app's NagaBridge.handleLine.
             hid.onButtonPressed = { rawCode in
+                // Unassigned wheel notches are the common case — bail before the synchronous log.
+                if (rawCode == "scrollUp" || rawCode == "scrollDown"), mapping[rawCode]?.action(for: hid.activeLayer) == nil { return }
                 hid.debugLog("onButtonPressed: rawCode=\(rawCode) activeLayer=\(hid.activeLayer) entry=\(String(describing: mapping[rawCode]))")
                 if let action = mapping[rawCode]?.action(for: hid.activeLayer) {
                     // Left/Right Click always do their normal click too (can't be suppressed), so:
@@ -216,6 +218,8 @@ struct ContentView: View {
         case "topB": return "Rear Top Button"
         case "scrollClick": return "Scroll Click"
         case "leftClick": return "Left Click"
+        case "scrollUp": return "Scroll Up"
+        case "scrollDown": return "Scroll Down"
         case "rightClick": return "Right Click"
         case "tiltLeft": return "Wheel Tilt Left"
         case "tiltRight": return "Wheel Tilt Right"

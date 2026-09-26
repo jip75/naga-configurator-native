@@ -71,6 +71,9 @@ final class NagaHIDManager: ObservableObject {
     private var lastTiltLeftFire: CFAbsoluteTime = 0
     private var lastTiltRightFire: CFAbsoluteTime = 0
     private let tiltDebounce: CFAbsoluteTime = 0.35
+    private var lastScrollUpFire: CFAbsoluteTime = 0
+    private var lastScrollDownFire: CFAbsoluteTime = 0
+    private let scrollDebounce: CFAbsoluteTime = 0.25
     // reportID=5/cookie=891 is NOT globally unique on this composite device — cookies are assigned
     // per-interface, so the DPI-shift buttons flanking the wheel (their own, still-unmapped
     // interface) can independently land on the same reportID/cookie pair and falsely fire topB
@@ -286,7 +289,26 @@ final class NagaHIDManager: ObservableObject {
         // dragging cursor movement and risking the CGEventTap's timeout-triggered auto-disable.
         // Bail before that call for all three; every other usage page is low-frequency enough
         // (button presses, not continuous) to log safely.
-        if usagePage == 0x01 && (usage == 0x30 || usage == 0x31 || usage == 0x38) { return }
+        if usagePage == 0x01 && usage == 0x38 {
+            // Scroll wheel ("scrollUp"/"scrollDown", 2026-09-26). Native scrolling always happens
+            // too (non-exclusive access, same as the tilts). One dispatch per direction per
+            // debounce window, so a fast spin can't fire an assigned action dozens of times —
+            // and no dbg() here: this is the high-rate path the comment above warns about.
+            let v = IOHIDValueGetIntegerValue(value)
+            guard v != 0 else { return }
+            let now = CFAbsoluteTimeGetCurrent()
+            if v > 0 {
+                guard now - lastScrollUpFire > scrollDebounce else { return }
+                lastScrollUpFire = now
+                DispatchQueue.main.async { self.onButtonPressed?("scrollUp") }
+            } else {
+                guard now - lastScrollDownFire > scrollDebounce else { return }
+                lastScrollDownFire = now
+                DispatchQueue.main.async { self.onButtonPressed?("scrollDown") }
+            }
+            return
+        }
+        if usagePage == 0x01 && (usage == 0x30 || usage == 0x31) { return }
         if usagePage == 0xFF00 && usage == 0x40 {
             guard IOHIDElementGetCookie(element) == 102 else { return }
             let tiltValue = IOHIDValueGetIntegerValue(value)
