@@ -19,6 +19,7 @@ private func compactLayerLabel(_ layer: HyperLayer) -> String {
 
 struct TopBarView: View {
     @EnvironmentObject var hid: NagaHIDManager
+    @EnvironmentObject var collapse: CollapseState
     @Environment(\.appAppearance) private var appearance
     // The true width offered by the window, measured once at ContentView's root via
     // GeometryReader and threaded down as a plain value. We deliberately do NOT self-measure
@@ -49,6 +50,7 @@ struct TopBarView: View {
                     HStack(spacing: 12) {
                         brandBlock
                         Spacer(minLength: 8)
+                        collapseButton
                         appearanceToggle
                         saveButton
                     }
@@ -65,6 +67,7 @@ struct TopBarView: View {
                     layerPills
                     Spacer(minLength: 8)
                     navTabs
+                    collapseButton
                     appearanceToggle
                     saveButton
                 }
@@ -94,6 +97,20 @@ struct TopBarView: View {
         .overlay(Circle().stroke(Theme.border, lineWidth: 1))
         .clipShape(Circle())
         .help("Switch to \(appearance.wrappedValue.next.label) mode")
+    }
+
+    private var collapseButton: some View {
+        Button { collapse.toggle() } label: {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 30, height: 30)
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(Theme.muted)
+        .background(Theme.bg)
+        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+        .clipShape(Circle())
+        .help("Collapse to a small bar")
     }
 
     // MARK: - Brand block

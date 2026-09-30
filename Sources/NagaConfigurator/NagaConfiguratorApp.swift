@@ -4,6 +4,7 @@ import AppKit
 @main
 struct NagaConfiguratorApp: App {
     @StateObject private var hid = NagaHIDManager()
+    @StateObject private var collapse = CollapseState()
     @AppStorage("appearance") private var appearance: AppAppearance = .dark
 
     // App Nap throttles a LaunchServices-launched process's main run loop when it isn't the
@@ -47,10 +48,17 @@ struct NagaConfiguratorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Group {
+                if collapse.collapsed {
+                    CollapsedBarView()
+                } else {
+                    ContentView()
+                        .frame(minWidth: 620, minHeight: 640)
+                }
+            }
                 .environmentObject(hid)
+                .environmentObject(collapse)
                 .environment(\.appAppearance, $appearance)
-                .frame(minWidth: 620, minHeight: 640)
                 .background(Theme.bg)
                 .preferredColorScheme(appearance.colorScheme)
                 .onAppear {
