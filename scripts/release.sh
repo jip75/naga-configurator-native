@@ -17,7 +17,7 @@ APP=build/NagaConfigurator.app
 DMG=build/NagaConfigurator.dmg
 BUNDLE_ID=io.mkrlab.naga-configurator-native
 SHORT_VERSION=1.3.0
-BUILD_VERSION=5
+BUILD_VERSION=6
 
 echo "==> Building release binary"
 swift build -c release
