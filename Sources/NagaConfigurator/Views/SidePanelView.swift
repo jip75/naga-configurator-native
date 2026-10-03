@@ -18,6 +18,7 @@ private let RAIL: [RailItem] = [
     RailItem(id: "Mouse Function", icon: "computermouse", tooltip: "Mouse Function", kind: .mouse),
     RailItem(id: "Macro", icon: "record.circle", tooltip: "Macro", kind: .macro),
     RailItem(id: "Launch", icon: "arrow.up.forward.app", tooltip: "Launch an App or File", kind: .launch),
+    RailItem(id: "Text Injection", icon: "text.alignleft", tooltip: "Inject Text", kind: .text),
     RailItem(id: "HyperShift Assign", icon: "bolt.fill", tooltip: "Toggle a HyperShift layer", kind: .layerToggle),
     RailItem(id: "Switch Profile", icon: "square.stack.3d.up", tooltip: "Switch Profile — not wired up yet (single profile only)", kind: nil),
 ]
@@ -28,6 +29,7 @@ private func railID(for kind: ActionKind) -> String {
     case .mouse: return "Mouse Function"
     case .macro: return "Macro"
     case .launch: return "Launch"
+    case .text: return "Text Injection"
     case .layerToggle: return "HyperShift Assign"
     case .none: return "Keyboard Function"
     }
@@ -191,6 +193,8 @@ struct SidePanelView: View {
                                 MouseFunctionEditorView(value: action?.kind == .mouse ? action : nil, onChange: onChange)
                             case "Macro":
                                 MacroRecorderView(value: action?.kind == .macro ? action : nil, onChange: onChange)
+                            case "Text Injection":
+                                TextInjectionEditorView(value: action?.kind == .text ? action : nil, onChange: onChange)
                             case "HyperShift Assign":
                                 LayerToggleEditorView(value: action?.kind == .layerToggle ? action : nil, onChange: onChange)
                             default:

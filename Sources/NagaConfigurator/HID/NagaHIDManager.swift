@@ -572,7 +572,31 @@ final class NagaHIDManager: ObservableObject {
         case .layerToggle:
             guard let target = action.targetLayer else { return }
             activeLayer = activeLayer == target ? .base : target
+        case .text:
+            guard let textToInject = action.text, !textToInject.isEmpty else { return }
+            injectText(textToInject)
         }
+    }
+
+    private func injectText(_ text: String) {
+        for char in text {
+            if let (keyCode, needsShift) = Keycodes.charToKeyCode[char] {
+                let flags: CGEventFlags = needsShift ? .maskShift : []
+                post(keyCode, down: true, flags: flags)
+                post(keyCode, down: false, flags: flags)
+                usleep(10_000)
+            } else {
+                pasteText(String(char))
+            }
+        }
+    }
+
+    private func pasteText(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        post(Keycodes.VK.v, down: true, flags: .maskCommand)
+        post(Keycodes.VK.v, down: false, flags: .maskCommand)
     }
 
     private func runMacro(_ steps: [MacroStep], index: Int) {

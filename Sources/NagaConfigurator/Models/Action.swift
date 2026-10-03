@@ -8,7 +8,7 @@ enum ModifierFlag: String, Codable, CaseIterable {
 }
 
 enum ActionKind: String, Codable {
-    case key, mouse, macro, launch, layerToggle
+    case key, mouse, macro, launch, layerToggle, text
     /// Name only, no action — lets a button with nothing assigned (e.g. the wheel, which keeps
     /// its native behavior) still carry a custom name. Dispatch does nothing.
     case none
@@ -69,6 +69,7 @@ struct Action: Codable, Equatable {
     var appName: String?
     var label: String?
     var targetLayer: HyperLayer?
+    var text: String?
 
     static func key(_ keyCode: Int, flags: [ModifierFlag] = [], extraKeyDown: Int? = nil, extraKeyUp: Int? = nil) -> Action {
         Action(kind: .key, keyCode: keyCode, flags: flags.isEmpty ? nil : flags, extraKeyDown: extraKeyDown, extraKeyUp: extraKeyUp)
@@ -84,6 +85,9 @@ struct Action: Codable, Equatable {
     }
     static func layerToggle(_ layer: HyperLayer) -> Action {
         Action(kind: .layerToggle, targetLayer: layer)
+    }
+    static func text(_ text: String) -> Action {
+        Action(kind: .text, text: text)
     }
 
     var displayLabel: String {
@@ -101,6 +105,9 @@ struct Action: Codable, Equatable {
             return base.hasSuffix(".app") ? String(base.dropLast(4)) : base
         case .layerToggle:
             return targetLayer?.label ?? "HyperShift"
+        case .text:
+            let preview = (text ?? "").prefix(20)
+            return "Text: \"\(preview)\(text?.count ?? 0 > 20 ? "…" : "")\""
         case .none:
             return "Unassigned"
         }
